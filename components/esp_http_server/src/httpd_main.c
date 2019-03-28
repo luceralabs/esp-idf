@@ -363,7 +363,7 @@ esp_err_t httpd_start(httpd_handle_t *handle, const httpd_config_t *config)
     if (httpd_os_thread_create(&hd->hd_td.handle, "httpd",
                                hd->config.stack_size,
                                hd->config.task_priority,
-                               httpd_thread, hd, 
+                               httpd_thread, hd,
                                hd->config.core_id) != ESP_OK) {
         /* Failed to launch task */
         httpd_delete(hd);

@@ -15,8 +15,8 @@
 
 #include <xtensa/config/core.h>
 
-#include "rom/rtc.h"
-#include "rom/uart.h"
+#include "esp32/rom/rtc.h"
+#include "esp32/rom/uart.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -32,15 +32,15 @@
 #include "soc/rtc.h"
 #include "soc/rtc_wdt.h"
 
-#include "esp_gdbstub.h"
+#include "esp_private/gdbstub.h"
 #include "esp_panic.h"
 #include "esp_attr.h"
 #include "esp_err.h"
 #include "esp_core_dump.h"
 #include "esp_spi_flash.h"
-#include "esp_cache_err_int.h"
+#include "esp32/cache_err_int.h"
 #include "esp_app_trace.h"
-#include "esp_system_internal.h"
+#include "esp_private/system_internal.h"
 #include "sdkconfig.h"
 #include "esp_ota_ops.h"
 #if CONFIG_SYSVIEW_ENABLE

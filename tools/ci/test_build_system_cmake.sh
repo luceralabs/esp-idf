@@ -169,12 +169,12 @@ function run_tests()
     idf.py build
     take_build_snapshot
     sleep 1  # ninja may ignore if the timestamp delta is too low
-    cp ${IDF_PATH}/components/esp32/ld/esp32.rom.ld .
-    echo "/* (Build test comment) */" >> ${IDF_PATH}/components/esp32/ld/esp32.rom.ld
-    tail ${IDF_PATH}/components/esp32/ld/esp32.rom.ld
+    cp ${IDF_PATH}/components/esp_rom/esp32/ld/esp32.rom.ld .
+    echo "/* (Build test comment) */" >> ${IDF_PATH}/components/esp_rom/esp32/ld/esp32.rom.ld
+    tail ${IDF_PATH}/components/esp_rom/esp32/ld/esp32.rom.ld
     idf.py build || failure "Failed to rebuild with modified linker script"
     assert_rebuilt ${APP_BINS} ${BOOTLOADER_BINS}
-    mv esp32.rom.ld ${IDF_PATH}/components/esp32/ld/
+    mv esp32.rom.ld ${IDF_PATH}/components/esp_rom/esp32/ld/
 
     print_status "Updating app-only ld file should only re-link app"
     take_build_snapshot
@@ -275,6 +275,7 @@ function run_tests()
     # Next two tests will use this fake 'esp31b' target
     export fake_target=esp31b
     mkdir -p components/$fake_target
+    mkdir -p ${IDF_PATH}/components/xtensa/$fake_target/include
     touch components/$fake_target/CMakeLists.txt
     cp ${IDF_PATH}/tools/cmake/toolchain-esp32.cmake components/$fake_target/toolchain-$fake_target.cmake
     sed -i.bak '/cmake_minimum_required/ a\

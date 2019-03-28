@@ -300,9 +300,9 @@ void BTM_BleRegiseterConnParamCallback(tBTM_UPDATE_CONN_PARAM_CBACK *update_conn
 ** Returns          void
 **
 *******************************************************************************/
-BOOLEAN BTM_BleUpdateAdvWhitelist(BOOLEAN add_remove, BD_ADDR remote_bda, tBTM_ADD_WHITELIST_CBACK *add_wl_cb)
+BOOLEAN BTM_BleUpdateAdvWhitelist(BOOLEAN add_remove, BD_ADDR remote_bda, tBLE_ADDR_TYPE addr_type, tBTM_ADD_WHITELIST_CBACK *add_wl_cb)
 {
-    return btm_update_dev_to_white_list(add_remove, remote_bda, add_wl_cb);
+    return btm_update_dev_to_white_list(add_remove, remote_bda, addr_type, add_wl_cb);
 }
 
 /*******************************************************************************
@@ -756,6 +756,7 @@ extern void BTM_BleReadControllerFeatures(tBTM_BLE_CTRL_FEATURES_CBACK  *p_vsc_c
 
 void BTM_VendorHciEchoCmdCallback(tBTM_VSC_CMPL *p1)
 {
+#if (!CONFIG_BT_STACK_NO_LOG)
     if (!p1) {
         return;
     }
@@ -763,6 +764,7 @@ void BTM_VendorHciEchoCmdCallback(tBTM_VSC_CMPL *p1)
     uint8_t status, echo;
     STREAM_TO_UINT8  (status, p);
     STREAM_TO_UINT8  (echo, p);
+#endif
     BTM_TRACE_DEBUG("%s status 0x%x echo 0x%x", __func__, status, echo);
 }
 
@@ -1081,7 +1083,7 @@ void BTM_BleClearBgConnDev(void)
 BOOLEAN BTM_BleUpdateBgConnDev(BOOLEAN add_remove, BD_ADDR   remote_bda)
 {
     BTM_TRACE_EVENT("%s() add=%d", __func__, add_remove);
-    return btm_update_dev_to_white_list(add_remove, remote_bda, NULL);
+    return btm_update_dev_to_white_list(add_remove, remote_bda, 0, NULL);
 }
 
 /*******************************************************************************

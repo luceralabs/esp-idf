@@ -21,8 +21,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
-#include <rom/spi_flash.h>
-#include <rom/cache.h>
+#include <esp32/rom/spi_flash.h>
+#include <esp32/rom/cache.h>
 #include <soc/soc.h>
 #include <soc/dport_reg.h>
 #include "sdkconfig.h"
@@ -30,7 +30,7 @@
 #include "esp_attr.h"
 #include "esp_spi_flash.h"
 #include "esp_log.h"
-#include "esp_clk.h"
+#include "esp32/clk.h"
 #include "esp_flash_partitions.h"
 #include "esp_ota_ops.h"
 #include "cache_utils.h"

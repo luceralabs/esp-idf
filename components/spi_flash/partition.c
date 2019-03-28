@@ -19,7 +19,6 @@
 #include <sys/lock.h>
 #include "esp_flash_partitions.h"
 #include "esp_attr.h"
-#include "esp_flash_data_types.h"
 #include "esp_spi_flash.h"
 #include "esp_partition.h"
 #include "esp_flash_encrypt.h"
@@ -32,7 +31,7 @@
 // Enable built-in checks in queue.h in debug builds
 #define INVARIANTS
 #endif
-#include "rom/queue.h"
+#include "sys/queue.h"
 
 
 typedef struct partition_list_item_ {
