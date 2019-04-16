@@ -141,7 +141,7 @@ exclude =
     __pycache__,
     # submodules
         components/esptool_py/esptool,
-        components/micro-ecc/micro-ecc,
+        components/bootloader/subproject/components/micro-ecc/micro-ecc,
         components/nghttp/nghttp2,
         components/libsodium/libsodium,
         components/json/cJSON,
@@ -159,6 +159,3 @@ exclude =
         components/wifi_provisioning/python/wifi_config_pb2.py,
         components/wifi_provisioning/python/wifi_constants_pb2.py,
         examples/provisioning/custom_config/components/custom_provisioning/python/custom_config_pb2.py,
-    # temporary list (should be empty)
-        tools/esp_app_trace/pylibelf,
-        tools/mass_mfg/mfg_gen.py,

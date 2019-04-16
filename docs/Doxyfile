@@ -24,12 +24,12 @@ INPUT = \
     ##
     ## Wi-Fi - API Reference
     ##
-    ../../components/esp32/include/esp_wifi.h \
-    ../../components/esp32/include/esp_wifi_types.h \
-    ../../components/esp32/include/esp_smartconfig.h \
-    ../../components/esp32/include/esp_now.h \
+    ../../components/esp_wifi/include/esp_wifi.h \
+    ../../components/esp_wifi/include/esp_wifi_types.h \
+    ../../components/esp_wifi/include/esp_smartconfig.h \
+    ../../components/esp_wifi/include/esp_now.h \
     ## Mesh - API Reference
-    ../../components/esp32/include/esp_mesh.h \
+    ../../components/esp_wifi/include/esp_mesh.h \
     ## Bluetooth - API Reference
     ## Controller && VHCI
     ../../components/bt/include/esp_bt.h \
@@ -161,9 +161,9 @@ INPUT = \
     ../../components/esp_common/include/esp_int_wdt.h \
     ../../components/esp_common/include/esp_task_wdt.h \
     ## Hooks
-    ../../components/esp32/include/esp_freertos_hooks.h \
+    ../../components/esp_common/include/esp_freertos_hooks.h \
     ## Inter-Processor Call
-    ../../components/esp32/include/esp_ipc.h \
+    ../../components/esp_common/include/esp_ipc.h \
     ## Over The Air Updates (OTA)
     ../../components/app_update/include/esp_ota_ops.h \
     ## ESP HTTPS OTA
@@ -184,6 +184,7 @@ INPUT = \
     ## Application Level Tracing - API Reference
     ##
     ../../components/app_trace/include/esp_app_trace.h \
+    ../../components/app_trace/include/esp_sysview_trace.h \
     ### Power management
     ../../components/esp_common/include/esp_pm.h \
     ../../components/esp32/include/esp32/pm.h \

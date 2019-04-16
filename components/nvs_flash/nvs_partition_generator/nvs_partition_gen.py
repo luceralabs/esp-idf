@@ -501,7 +501,7 @@ class NVS(object):
     def create_new_page(self, is_rsrv_page=False):
         # Update available size as each page is created
         if self.size == 0:
-            raise InsufficientSizeError("Size parameter is is less than the size of data in csv.Please increase size.")
+            raise InsufficientSizeError("Size parameter is less than the size of data in csv.Please increase size.")
         if not is_rsrv_page:
             self.size = self.size - Page.PAGE_PARAMS["max_size"]
         self.page_num += 1
@@ -752,7 +752,7 @@ def nvs_part_gen(input_filename=None, output_filename=None, input_part_size=None
         output_file = open(output_filename, 'wb')
 
         with nvs_open(output_file, input_size) as nvs_obj:
-            reader = csv.DictReader(input_file, delimiter=',')
+            reader = csv.DictReader(filter(lambda row: row[0] != '#',input_file), delimiter=',')
             for row in reader:
                 try:
                     write_entry(nvs_obj, row["key"], row["type"], row["encoding"], row["value"])

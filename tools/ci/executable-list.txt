@@ -1,6 +1,6 @@
 # Some tools
 components/app_update/gen_empty_partition.py
-components/esp32/ld/elf_to_ld.sh
+tools/elf_to_ld.sh
 components/espcoredump/espcoredump.py
 components/heap/test_multi_heap_host/test_all_configs.sh
 components/idf_test/unit_test/TestCaseScript/IDFUnitTest/__init__.py
@@ -13,6 +13,7 @@ components/app_update/gen_empty_partition.py
 components/app_update/otatool.py
 components/partition_table/test_gen_esp32part_host/gen_esp32part_tests.py
 components/ulp/esp32ulp_mapgen.py
+components/spiffs/spiffsgen.py
 docs/check_doc_warnings.sh
 docs/check_lang_folder_sync.sh
 docs/gen-kconfig-doc.py
@@ -33,8 +34,10 @@ tools/ci/test_build_system_cmake.sh
 tools/ci/test_configure_ci_environment.sh
 tools/cmake/convert_to_cmake.py
 tools/cmake/run_cmake_lint.sh
-tools/esp_app_trace/apptrace_proc.py
 tools/esp_app_trace/logtrace_proc.py
+tools/esp_app_trace/sysviewtrace_proc.py
+tools/esp_app_trace/test/logtrace/test.sh
+tools/esp_app_trace/test/sysview/test.sh
 tools/format.sh
 tools/gen_esp_err_to_name.py
 tools/idf.py

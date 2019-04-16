@@ -61,6 +61,11 @@ macro(idf_set_variables)
     set_default(IDF_COMPONENT_REQUIRES_COMMON "cxx ${IDF_TARGET} newlib freertos heap log soc \
                                                 esp_rom esp_common xtensa")
 
+    list(FIND IDF_COMPONENT_REQUIRES_COMMON "${IDF_TARGET}" result)
+    if(result EQUAL -1)
+        list(APPEND IDF_COMPONENT_REQUIRES_COMMON "${IDF_TARGET}")
+    endif()
+
     set(IDF_PROJECT_PATH "${CMAKE_SOURCE_DIR}")
 
     set(ESP_PLATFORM 1 CACHE BOOL INTERNAL)
@@ -87,6 +92,8 @@ function(idf_set_global_compile_options)
 
     list(APPEND compile_definitions "ESP_PLATFORM" "HAVE_CONFIG_H")
 
+    spaces2list(CMAKE_C_FLAGS)
+    spaces2list(CMAKE_CXX_FLAGS)
     list(APPEND compile_options "${CMAKE_C_FLAGS}")
     list(APPEND c_compile_options "${CMAKE_C_FLAGS}")
     list(APPEND cxx_compile_options "${CMAKE_CXX_FLAGS}")
