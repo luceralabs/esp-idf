@@ -58,12 +58,16 @@ macro(idf_set_variables)
 
     set_default(IDF_COMPONENT_DIRS "${IDF_EXTRA_COMPONENT_DIRS} ${IDF_PATH}/components")
     set_default(IDF_COMPONENTS "")
-    set_default(IDF_COMPONENT_REQUIRES_COMMON "cxx ${IDF_TARGET} newlib freertos heap log soc \
+    set_default(IDF_COMPONENT_REQUIRES_COMMON "cxx ${IDF_TARGET} newlib freertos heap log \
                                                 esp_rom esp_common xtensa")
 
     list(FIND IDF_COMPONENT_REQUIRES_COMMON "${IDF_TARGET}" result)
     if(result EQUAL -1)
         list(APPEND IDF_COMPONENT_REQUIRES_COMMON "${IDF_TARGET}")
+    endif()
+
+    if(CONFIG_LEGACY_INCLUDE_COMMON_HEADERS)
+        list(APPEND IDF_COMPONENT_REQUIRES_COMMON "soc")
     endif()
 
     set(IDF_PROJECT_PATH "${CMAKE_SOURCE_DIR}")
@@ -106,6 +110,9 @@ function(idf_set_global_compile_options)
 
     list(APPEND c_compile_options "-std=gnu99")
     list(APPEND cxx_compile_options "-std=gnu++11" "-fno-rtti")
+
+    # IDF uses some GNU extension from libc
+    list(APPEND compile_definitions "_GNU_SOURCE")
 
     if(CONFIG_CXX_EXCEPTIONS)
         list(APPEND cxx_compile_options "-fexceptions")

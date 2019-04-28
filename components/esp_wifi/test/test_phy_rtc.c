@@ -44,6 +44,7 @@ static void test_phy_rtc_init(void)
 
     //must run here, not blocking in above code
     TEST_ASSERT(1);
+    nvs_flash_deinit();
 }
 
 static IRAM_ATTR void test_phy_rtc_cache_task(void *arg)

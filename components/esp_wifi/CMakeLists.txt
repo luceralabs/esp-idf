@@ -2,6 +2,7 @@ set(COMPONENT_SRCS
     "src/coexist.c"
     "src/fast_crypto_ops.c"
     "src/lib_printf.c"
+    "src/mesh_event.c"
     "src/phy_init.c"
     "src/restore.c"
     "src/wifi_init.c")
@@ -9,13 +10,15 @@ set(COMPONENT_ADD_INCLUDEDIRS "include")
 set(COMPONENT_PRIV_INCLUDEDIRS)
 set(COMPONENT_REQUIRES)
 set(COMPONENT_PRIV_REQUIRES "wpa_supplicant" "nvs_flash")
-set(COMPONENT_ADD_LDFRAGMENTS "linker.lf")
+
+if(NOT CONFIG_NO_BLOBS)
+    set(COMPONENT_ADD_LDFRAGMENTS "linker.lf")
+endif()
 
 register_component()
 
-target_link_libraries(${COMPONENT_TARGET} "-L ${CMAKE_CURRENT_SOURCE_DIR}/lib_${IDF_TARGET}")
-
 if(NOT CONFIG_NO_BLOBS)
+    target_link_libraries(${COMPONENT_TARGET} "-L ${CMAKE_CURRENT_SOURCE_DIR}/lib_${IDF_TARGET}")
     target_link_libraries(${COMPONENT_TARGET} coexist core espnow mesh net80211 phy pp rtc smartconfig wpa2 wpa wps)
 endif()
 

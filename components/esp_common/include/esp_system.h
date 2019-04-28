@@ -18,7 +18,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_err.h"
-#include "esp_sleep.h"
+#include "esp_attr.h"
+#include "esp_bit_defs.h"
+
+#include "sdkconfig.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,8 +83,24 @@ typedef void (*shutdown_handler_t)(void);
   *
   * This function allows you to register a handler that gets invoked before
   * the application is restarted using esp_restart function.
+  * @param handle function to execute on restart
+  * @return
+  *   - ESP_OK on success
+  *   - ESP_ERR_INVALID_STATE if the handler has already been registered
+  *   - ESP_ERR_NO_MEM if no more shutdown handler slots are available
   */
 esp_err_t esp_register_shutdown_handler(shutdown_handler_t handle);
+
+/**
+  * @brief  Unregister shutdown handler
+  *
+  * This function allows you to unregister a handler which was previously
+  * registered using esp_register_shutdown_handler function.
+  *   - ESP_OK on success
+  *   - ESP_ERR_INVALID_STATE if the given handler hasn't been registered before
+  */
+esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handle);
+
 
 /**
   * @brief  Restart PRO and APP CPUs.
