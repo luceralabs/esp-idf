@@ -1,0 +1,12 @@
+menu "SDMMC"
+
+    config SDMMC_FORCE_SD_MODE
+        bool "Force SD card mode"
+        default n
+        help
+            If this option is enabled, the peripheral will be treated as an SD card regardless 
+            of the responses provided by the peripheral during interrogation. 
+
+endmenu
+
+
