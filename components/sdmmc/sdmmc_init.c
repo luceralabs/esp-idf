@@ -55,16 +55,14 @@ esp_err_t sdmmc_card_init(const sdmmc_host_t* config, sdmmc_card_t* card)
     /* IO_SEND_OP_COND(CMD5), Determine if the card is an IO card. */
     SDMMC_INIT_STEP(io_supported, sdmmc_init_io);
 
-#ifndef CONFIG_SDMMC_FORCE_SD_MODE
-    const bool is_mem = card->is_mem;
-    const bool is_sdio = !is_mem;
-#else
+#ifdef CONFIG_SDMMC_FORCE_SD_MODE
     if(!card->is_mem) {
         ESP_LOGW(TAG, "Peripheral identified as SDIO but forcing SD card interface");
     }
-    const bool is_mem = true;
-    const bool is_sdio = false;
+    card->is_mem = 1;
 #endif
+    const bool is_mem = card->is_mem;
+    const bool is_sdio = !is_mem;
 
     /* Enable CRC16 checks for data transfers in SPI mode */
     SDMMC_INIT_STEP(is_spi, sdmmc_init_spi_crc);
@@ -72,16 +70,15 @@ esp_err_t sdmmc_card_init(const sdmmc_host_t* config, sdmmc_card_t* card)
     /* Use SEND_OP_COND to set up card OCR */
     SDMMC_INIT_STEP(is_mem, sdmmc_init_ocr);
 
-#ifndef CONFIG_SDMMC_FORCE_SD_MODE
-    const bool is_mmc = is_mem && card->is_mmc;
-    const bool is_sdmem = is_mem && !is_mmc;
-#else
+#ifdef CONFIG_SDMMC_FORCE_SD_MODE
     if(is_mem && card->is_mmc) {
         ESP_LOGW(TAG, "Peripheral identified as MMC but forcing SD card interface");
     }
-    const bool is_mmc = false;
-    const bool is_sdmem = true;
+    card->is_mmc = 0;
 #endif
+    
+    const bool is_mmc = is_mem && card->is_mmc;
+    const bool is_sdmem = is_mem && !is_mmc;
 
     ESP_LOGI(TAG, "%s: card type is %s", __func__,
             is_sdio ? "SDIO" : is_mmc ? "MMC" : "SD");
