@@ -58,7 +58,7 @@ function run_tests()
     BOOTLOADER_BINS="bootloader/bootloader.elf bootloader/bootloader.bin"
     APP_BINS="app-template.elf app-template.bin"
     PARTITION_BIN="partition_table/partition-table.bin"
-    IDF_COMPONENT_PREFIX="idf_component"
+    IDF_COMPONENT_PREFIX="__idf"
 
     print_status "Initial clean build"
     # if build fails here, everything fails
@@ -342,6 +342,7 @@ function run_tests()
     rm sdkconfig.defaults;
 
     print_status "Building a project with CMake library imported and PSRAM workaround, all files compile with workaround"
+    # Test for libraries compiled within ESP-IDF
     rm -rf build
     echo "CONFIG_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
     echo "CONFIG_SPIRAM_CACHE_WORKAROUND=y" >> sdkconfig.defaults
@@ -349,7 +350,16 @@ function run_tests()
     idf.py -C $IDF_PATH/examples/build_system/cmake/import_lib -B `pwd`/build reconfigure -D SDKCONFIG_DEFAULTS="`pwd`/sdkconfig.defaults"
     grep -q '"command"' build/compile_commands.json || failure "compile_commands.json missing or has no no 'commands' in it"
     (grep '"command"' build/compile_commands.json | grep -v mfix-esp32-psram-cache-issue) && failure "All commands in compile_commands.json should use PSRAM cache workaround"
-    rm sdkconfig.defaults
+    rm -r sdkconfig.defaults build
+    # Test for external libraries in custom CMake projects with ESP-IDF components linked
+    mkdir build && touch build/sdkconfig
+    echo "CONFIG_SPIRAM_SUPPORT=y" >> build/sdkconfig
+    echo "CONFIG_SPIRAM_CACHE_WORKAROUND=y" >> build/sdkconfig
+    # note: we just need to run cmake
+    (cd build && cmake $IDF_PATH/examples/build_system/cmake/idf_as_lib -DCMAKE_TOOLCHAIN_FILE=$IDF_PATH/tools/cmake/toolchain-esp32.cmake -DTARGET=esp32)
+    grep -q '"command"' build/compile_commands.json || failure "compile_commands.json missing or has no no 'commands' in it"
+    (grep '"command"' build/compile_commands.json | grep -v mfix-esp32-psram-cache-issue) && failure "All commands in compile_commands.json should use PSRAM cache workaround"
+    rm -r build
 
     print_status "Make sure a full build never runs '/usr/bin/env python' or similar"
     OLDPATH="$PATH"
@@ -400,6 +410,14 @@ endmenu\n" >> ${IDF_PATH}/Kconfig;
     (export PATH=$PWD:$PATH && idf.py reconfigure --no-ccache | grep -c "ccache will be used for faster builds" | grep -wq 0) \
         || failure "ccache should not be used even when present if --no-ccache is specified"
     rm -f ccache
+
+    print_status "Custom bootloader overrides original"
+    clean_build_dir
+    (mkdir components && cd components && cp -r $IDF_PATH/components/bootloader .)
+    idf.py build
+    grep "$PWD/components/bootloader/subproject/main/bootloader_start.c" build/bootloader/compile_commands.json \
+        || failure "Custom bootloader source files should be built instead of the original's"
+    rm -rf components
 
     print_status "All tests completed"
     if [ -n "${FAILURES}" ]; then
