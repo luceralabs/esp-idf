@@ -9,28 +9,19 @@ unset(compile_definitions)
 # Add the following build specifications here, since these seem to be dependent
 # on config values on the root Kconfig.
 
-# Temporary trick to support both gcc5 and gcc8 builds
-if(CMAKE_C_COMPILER_VERSION VERSION_EQUAL 5.2.0)
-    set(GCC_NOT_5_2_0 0 CACHE STRING "GCC is 5.2.0 version")
-else()
-    set(GCC_NOT_5_2_0 1 CACHE STRING "GCC is not 5.2.0 version")
-endif()
-
-list(APPEND compile_definitions "-DGCC_NOT_5_2_0=${GCC_NOT_5_2_0}")
-
-if(CONFIG_OPTIMIZATION_LEVEL_RELEASE)
+if(CONFIG_COMPILER_OPTIMIZATION_LEVEL_RELEASE)
     list(APPEND compile_options "-Os")
 else()
     list(APPEND compile_options "-Og")
 endif()
 
-if(CONFIG_CXX_EXCEPTIONS)
+if(CONFIG_COMPILER_CXX_EXCEPTIONS)
     list(APPEND cxx_compile_options "-fexceptions")
 else()
     list(APPEND cxx_compile_options "-fno-exceptions")
 endif()
 
-if(CONFIG_DISABLE_GCC8_WARNINGS)
+if(CONFIG_COMPILER_DISABLE_GCC8_WARNINGS)
     list(APPEND compile_options "-Wno-parentheses"
                                 "-Wno-sizeof-pointer-memaccess"
                                 "-Wno-clobbered")
@@ -50,21 +41,18 @@ if(CONFIG_DISABLE_GCC8_WARNINGS)
     endif()
 endif()
 
-if(CONFIG_OPTIMIZATION_ASSERTIONS_DISABLED)
+if(CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE)
     list(APPEND compile_definitions "NDEBUG")
 endif()
 
-if(CONFIG_STACK_CHECK_NORM)
+if(CONFIG_COMPILER_STACK_CHECK_MODE_NORM)
     list(APPEND compile_options "-fstack-protector")
-elseif(CONFIG_STACK_CHECK_STRONG)
+elseif(CONFIG_COMPILER_STACK_CHECK_MODE_STRONG)
     list(APPEND compile_options "-fstack-protector-strong")
-elseif(CONFIG_STACK_CHECK_ALL)
+elseif(CONFIG_COMPILER_STACK_CHECK_MODE_ALL)
     list(APPEND compile_options "-fstack-protector-all")
 endif()
 
-# All targets built under this scope is with the ESP-IDF build system
-set(ESP_PLATFORM 1)
-list(APPEND compile_definitions "-DESP_PLATFORM")
 
 idf_build_set_property(COMPILE_OPTIONS "${compile_options}" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "${c_compile_options}" APPEND)

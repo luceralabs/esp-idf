@@ -58,6 +58,7 @@ function run_tests()
     BOOTLOADER_BINS="bootloader/bootloader.elf bootloader/bootloader.bin"
     APP_BINS="app-template.elf app-template.bin"
     PARTITION_BIN="partition_table/partition-table.bin"
+    BUILD_ARTIFACTS="project_description.json flasher_args.json config/kconfig_menus.json config/sdkconfig.json"
     IDF_COMPONENT_PREFIX="__idf"
 
     print_status "Initial clean build"
@@ -65,7 +66,7 @@ function run_tests()
     idf.py build || exit $?
 
     # check all the expected build artifacts from the clean build
-    assert_built ${APP_BINS} ${BOOTLOADER_BINS} ${PARTITION_BIN}
+    assert_built ${APP_BINS} ${BOOTLOADER_BINS} ${PARTITION_BIN} ${BUILD_ARTIFACTS}
 
     print_status "Updating component source file rebuilds component"
     # touch a file & do a build
@@ -344,7 +345,7 @@ function run_tests()
     print_status "Building a project with CMake library imported and PSRAM workaround, all files compile with workaround"
     # Test for libraries compiled within ESP-IDF
     rm -rf build
-    echo "CONFIG_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
+    echo "CONFIG_ESP32_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
     echo "CONFIG_SPIRAM_CACHE_WORKAROUND=y" >> sdkconfig.defaults
     # note: we do 'reconfigure' here, as we just need to run cmake
     idf.py -C $IDF_PATH/examples/build_system/cmake/import_lib -B `pwd`/build reconfigure -D SDKCONFIG_DEFAULTS="`pwd`/sdkconfig.defaults"
@@ -353,7 +354,7 @@ function run_tests()
     rm -r sdkconfig.defaults build
     # Test for external libraries in custom CMake projects with ESP-IDF components linked
     mkdir build && touch build/sdkconfig
-    echo "CONFIG_SPIRAM_SUPPORT=y" >> build/sdkconfig
+    echo "CONFIG_ESP32_SPIRAM_SUPPORT=y" >> build/sdkconfig
     echo "CONFIG_SPIRAM_CACHE_WORKAROUND=y" >> build/sdkconfig
     # note: we just need to run cmake
     (cd build && cmake $IDF_PATH/examples/build_system/cmake/idf_as_lib -DCMAKE_TOOLCHAIN_FILE=$IDF_PATH/tools/cmake/toolchain-esp32.cmake -DTARGET=esp32)
@@ -403,6 +404,9 @@ endmenu\n" >> ${IDF_PATH}/Kconfig;
     pushd ${IDF_PATH}
     git checkout -- sdkconfig.rename Kconfig
     popd
+
+    print_status "Confserver can be invoked by idf.py"
+    echo '{"version": 1}' | idf.py confserver || failure "Couldn't load confserver"
 
     print_status "Check ccache is used to build when present"
     touch ccache && chmod +x ccache  # make sure that ccache is present for this test

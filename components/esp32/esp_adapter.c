@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -53,13 +54,15 @@
 extern void esp_dport_access_stall_other_cpu_start_wrap(void);
 extern void esp_dport_access_stall_other_cpu_end_wrap(void);
 
+#define TAG "esp_adapter"
+
 /*
- If CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST is enabled. Prefer to allocate a chunk of memory in SPIRAM firstly.
+ If CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP is enabled. Prefer to allocate a chunk of memory in SPIRAM firstly.
  If failed, try to allocate it in internal memory then.
  */
 IRAM_ATTR void *wifi_malloc( size_t size )
 {
-#if CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST
+#if CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP
     return heap_caps_malloc_prefer(size, 2, MALLOC_CAP_DEFAULT|MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT|MALLOC_CAP_INTERNAL);
 #else
     return malloc(size);
@@ -67,12 +70,12 @@ IRAM_ATTR void *wifi_malloc( size_t size )
 }
 
 /*
- If CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST is enabled. Prefer to allocate a chunk of memory in SPIRAM firstly.
+ If CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP is enabled. Prefer to allocate a chunk of memory in SPIRAM firstly.
  If failed, try to allocate it in internal memory then.
  */
 IRAM_ATTR void *wifi_realloc( void *ptr, size_t size )
 {
-#if CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST
+#if CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP
     return heap_caps_realloc_prefer(ptr, size, 2, MALLOC_CAP_DEFAULT|MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT|MALLOC_CAP_INTERNAL);
 #else
     return realloc(ptr, size);
@@ -80,12 +83,12 @@ IRAM_ATTR void *wifi_realloc( void *ptr, size_t size )
 }
 
 /*
- If CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST is enabled. Prefer to allocate a chunk of memory in SPIRAM firstly.
+ If CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP is enabled. Prefer to allocate a chunk of memory in SPIRAM firstly.
  If failed, try to allocate it in internal memory then.
  */
 IRAM_ATTR void *wifi_calloc( size_t n, size_t size )
 {
-#if CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST
+#if CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP
     return heap_caps_calloc_prefer(n, size, 2, MALLOC_CAP_DEFAULT|MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT|MALLOC_CAP_INTERNAL);
 #else
     return calloc(n, size);
@@ -216,6 +219,41 @@ static void * semphr_create_wrapper(uint32_t max, uint32_t init)
 static void semphr_delete_wrapper(void *semphr)
 {
     vSemaphoreDelete(semphr);
+}
+
+static void wifi_thread_semphr_free(void* data)
+{
+    xSemaphoreHandle *sem = (xSemaphoreHandle*)(data);
+
+    if (sem) {
+        vSemaphoreDelete(sem);
+    }
+}
+
+static void * wifi_thread_semphr_get_wrapper(void)
+{
+    static bool s_wifi_thread_sem_key_init = false;
+    static pthread_key_t s_wifi_thread_sem_key;
+    xSemaphoreHandle sem = NULL;
+
+    if (s_wifi_thread_sem_key_init == false) {
+        if (0 != pthread_key_create(&s_wifi_thread_sem_key, wifi_thread_semphr_free)) {
+            return NULL;
+        }
+        s_wifi_thread_sem_key_init = true;
+    }
+
+    sem = pthread_getspecific(s_wifi_thread_sem_key);
+    if (!sem) {
+        sem = xSemaphoreCreateCounting(1, 0);
+        if (sem) {
+            pthread_setspecific(s_wifi_thread_sem_key, sem);
+            ESP_LOGV(TAG, "thread sem create: sem=%p", sem);
+        }
+    }
+
+    ESP_LOGV(TAG, "thread sem get: sem=%p", sem);
+    return (void*)sem;
 }
 
 static int32_t IRAM_ATTR semphr_take_from_isr_wrapper(void *semphr, void *hptw)
@@ -396,7 +434,7 @@ static void sc_ack_send_wrapper(void *param)
 
 static uint32_t coex_status_get_wrapper(void)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_status_get();
 #else
     return 0;
@@ -405,7 +443,7 @@ static uint32_t coex_status_get_wrapper(void)
 
 static int coex_wifi_request_wrapper(uint32_t event, uint32_t latency, uint32_t duration)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_wifi_request(event, latency, duration);
 #else
     return 0;
@@ -414,7 +452,7 @@ static int coex_wifi_request_wrapper(uint32_t event, uint32_t latency, uint32_t 
 
 static int coex_wifi_release_wrapper(uint32_t event)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_wifi_release(event);
 #else
     return 0;
@@ -423,7 +461,7 @@ static int coex_wifi_release_wrapper(uint32_t event)
 
 int IRAM_ATTR coex_bt_request_wrapper(uint32_t event, uint32_t latency, uint32_t duration)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_bt_request(event, latency, duration);
 #else
     return 0;
@@ -432,7 +470,7 @@ int IRAM_ATTR coex_bt_request_wrapper(uint32_t event, uint32_t latency, uint32_t
 
 int IRAM_ATTR coex_bt_release_wrapper(uint32_t event)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_bt_release(event);
 #else
     return 0;
@@ -441,7 +479,7 @@ int IRAM_ATTR coex_bt_release_wrapper(uint32_t event)
 
 int coex_register_bt_cb_wrapper(coex_func_cb_t cb)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_register_bt_cb(cb);
 #else
     return 0;
@@ -450,7 +488,7 @@ int coex_register_bt_cb_wrapper(coex_func_cb_t cb)
 
 uint32_t IRAM_ATTR coex_bb_reset_lock_wrapper(void)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     return coex_bb_reset_lock();
 #else
     return 0;
@@ -459,7 +497,7 @@ uint32_t IRAM_ATTR coex_bb_reset_lock_wrapper(void)
 
 void IRAM_ATTR coex_bb_reset_unlock_wrapper(uint32_t restore)
 {
-#if CONFIG_SW_COEXIST_ENABLE
+#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
     coex_bb_reset_unlock(restore);
 #endif
 }
@@ -478,6 +516,7 @@ wifi_osi_funcs_t g_wifi_osi_funcs = {
     ._semphr_delete = semphr_delete_wrapper,
     ._semphr_take = semphr_take_wrapper,
     ._semphr_give = semphr_give_wrapper,
+    ._wifi_thread_semphr_get = wifi_thread_semphr_get_wrapper,
     ._mutex_create = mutex_create_wrapper,
     ._recursive_mutex_create = recursive_mutex_create_wrapper,
     ._mutex_delete = mutex_delete_wrapper,

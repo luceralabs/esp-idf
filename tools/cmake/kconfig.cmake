@@ -137,7 +137,7 @@ function(__kconfig_generate_config sdkconfig sdkconfig_defaults)
     set(sdkconfig_cmake ${config_dir}/sdkconfig.cmake)
     set(sdkconfig_header ${config_dir}/sdkconfig.h)
     set(sdkconfig_json ${config_dir}/sdkconfig.json)
-    set(sdkconfig_json_menus ${config_dir}/${kconfig_menus}.json)
+    set(sdkconfig_json_menus ${config_dir}/kconfig_menus.json)
 
     idf_build_get_property(output_sdkconfig __OUTPUT_SDKCONFIG)
     if(output_sdkconfig)
@@ -212,8 +212,8 @@ function(__kconfig_generate_config sdkconfig sdkconfig_defaults)
     add_custom_target(confserver
         COMMAND ${CMAKE_COMMAND} -E env
         "COMPONENT_KCONFIGS=${kconfigs}"
-        "COMPONENT_KCONFIGS_PROJBUILD=${kconfigs_projbuild}"
-        ${PYTHON} ${IDF_PATH}/tools/kconfig_new/confserver.py --kconfig ${IDF_PATH}/Kconfig --config ${SDKCONFIG}
+        "COMPONENT_KCONFIGS_PROJBUILD=${kconfig_projbuilds}"
+        ${PYTHON} ${IDF_PATH}/tools/kconfig_new/confserver.py --kconfig ${IDF_PATH}/Kconfig --config ${sdkconfig}
         VERBATIM
         USES_TERMINAL)
 endfunction()

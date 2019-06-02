@@ -23,7 +23,7 @@ import argparse
 from io import open
 
 # regular expression for matching Kconfig files
-RE_KCONFIG = r'^Kconfig(?:\.projbuild)?$'
+RE_KCONFIG = r'^Kconfig(\.projbuild)?(\.in)?$'
 
 # ouput file with suggestions will get this suffix
 OUTPUT_SUFFIX = '.new'
@@ -34,15 +34,16 @@ OUTPUT_SUFFIX = '.new'
 IGNORE_DIRS = (
     # Kconfigs from submodules need to be ignored:
     os.path.join('components', 'mqtt', 'esp-mqtt'),
+    # Test Kconfigs are also ignored
+    os.path.join('tools', 'ldgen', 'test', 'data'),
+    os.path.join('tools', 'kconfig_new', 'test'),
 )
 
 SPACES_PER_INDENT = 4
 
-# TODO decrease the value (after the names have been refactored)
-CONFIG_NAME_MAX_LENGTH = 60
+CONFIG_NAME_MAX_LENGTH = 40
 
-# TODO increase prefix length (after the names have been refactored)
-CONFIG_NAME_MIN_PREFIX_LENGTH = 0
+CONFIG_NAME_MIN_PREFIX_LENGTH = 3
 
 # The checker will not fail if it encounters this string (it can be used for temporarily resolve conflicts)
 RE_NOERROR = re.compile(r'\s+#\s+NOERROR\s+$')
@@ -262,8 +263,9 @@ class IndentAndNameChecker(BaseChecker):
         common_prefix_len = len(common_prefix)
         if common_prefix_len < self.min_prefix_length:
             raise InputError(self.path_in_idf, line_number,
-                             'Common prefix "{}" length is {} and should be at least {} characters long'
-                             ''.format(common_prefix, common_prefix_len, self.min_prefix_length),
+                             'The common prefix for the config names of the menu ending at this line is "{}". '
+                             'All config names in this menu should start with the same prefix of {} characters '
+                             'or more.'.format(common_prefix, self.min_prefix_length),
                              line)   # no suggested correction for this
         if len(self.prefix_stack) > 0:
             parent_prefix = self.prefix_stack[-1]

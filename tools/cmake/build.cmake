@@ -91,7 +91,7 @@ function(__build_set_default_build_specifications)
     unset(c_compile_options)
     unset(cxx_compile_options)
 
-    list(APPEND compile_definitions "-DHAVE_CONFIG_H")
+    list(APPEND compile_definitions "-D_GNU_SOURCE")
 
     list(APPEND compile_options     "-ffunction-sections"
                                     "-fdata-sections"
@@ -147,7 +147,10 @@ function(__build_init idf_path)
     file(GLOB component_dirs ${idf_path}/components/*)
     foreach(component_dir ${component_dirs})
         get_filename_component(component_dir ${component_dir} ABSOLUTE)
-        __component_add(${component_dir} ${prefix})
+        __component_dir_quick_check(is_component ${component_dir})
+        if(is_component)
+            __component_add(${component_dir} ${prefix})
+        endif()
     endforeach()
 
     # Set components required by all other components in the build
@@ -439,12 +442,26 @@ macro(idf_build_process target)
         idf_build_set_property(___COMPONENT_REQUIRES_COMMON ${lib} APPEND)
     endforeach()
 
+    # Temporary trick to support both gcc5 and gcc8 builds
+    if(CMAKE_C_COMPILER_VERSION VERSION_EQUAL 5.2.0)
+        set(GCC_NOT_5_2_0 0 CACHE STRING "GCC is 5.2.0 version")
+    else()
+        set(GCC_NOT_5_2_0 1 CACHE STRING "GCC is not 5.2.0 version")
+    endif()
+    idf_build_set_property(COMPILE_DEFINITIONS "-DGCC_NOT_5_2_0" APPEND)
+
+    # All targets built under this scope is with the ESP-IDF build system
+    set(ESP_PLATFORM 1)
+    idf_build_set_property(COMPILE_DEFINITIONS "-DESP_PLATFORM" APPEND)
+
     __build_process_project_includes()
 
     # Perform component processing (inclusion of project_include.cmake, adding component
     # subdirectories, creating library targets, linking libraries, etc.)
     idf_build_get_property(idf_path IDF_PATH)
     add_subdirectory(${idf_path} ${build_dir}/esp-idf)
+
+    unset(ESP_PLATFORM)
 endmacro()
 
 # idf_build_executable
