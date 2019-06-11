@@ -348,7 +348,7 @@ function run_tests()
     echo "CONFIG_ESP32_SPIRAM_SUPPORT=y" >> sdkconfig.defaults
     echo "CONFIG_SPIRAM_CACHE_WORKAROUND=y" >> sdkconfig.defaults
     # note: we do 'reconfigure' here, as we just need to run cmake
-    idf.py -C $IDF_PATH/examples/build_system/cmake/import_lib -B `pwd`/build reconfigure -D SDKCONFIG_DEFAULTS="`pwd`/sdkconfig.defaults"
+    idf.py -C $IDF_PATH/examples/build_system/cmake/import_lib -B `pwd`/build -D SDKCONFIG_DEFAULTS="`pwd`/sdkconfig.defaults" reconfigure
     grep -q '"command"' build/compile_commands.json || failure "compile_commands.json missing or has no no 'commands' in it"
     (grep '"command"' build/compile_commands.json | grep -v mfix-esp32-psram-cache-issue) && failure "All commands in compile_commands.json should use PSRAM cache workaround"
     rm -r sdkconfig.defaults build
@@ -411,7 +411,7 @@ endmenu\n" >> ${IDF_PATH}/Kconfig;
     print_status "Check ccache is used to build when present"
     touch ccache && chmod +x ccache  # make sure that ccache is present for this test
     (export PATH=$PWD:$PATH && idf.py reconfigure | grep "ccache will be used for faster builds") || failure "ccache should be used when present"
-    (export PATH=$PWD:$PATH && idf.py reconfigure --no-ccache | grep -c "ccache will be used for faster builds" | grep -wq 0) \
+    (export PATH=$PWD:$PATH && idf.py  --no-ccache reconfigure| grep -c "ccache will be used for faster builds" | grep -wq 0) \
         || failure "ccache should not be used even when present if --no-ccache is specified"
     rm -f ccache
 
@@ -422,6 +422,41 @@ endmenu\n" >> ${IDF_PATH}/Kconfig;
     grep "$PWD/components/bootloader/subproject/main/bootloader_start.c" build/bootloader/compile_commands.json \
         || failure "Custom bootloader source files should be built instead of the original's"
     rm -rf components
+
+    print_status "Empty directory not treated as a component"
+    clean_build_dir
+    mkdir -p components/esp32 && idf.py reconfigure
+    ! grep "$PWD/components/esp32"  $PWD/build/project_description.json || failure "Failed to build with empty esp32 directory in components"
+    rm -rf components
+
+    print_status "If a component directory is added to COMPONENT_DIRS, its subdirectories are not added"
+    clean_build_dir
+    mkdir -p main/test
+    echo "idf_component_register()" > main/test/CMakeLists.txt
+    idf.py reconfigure
+    ! grep "$PWD/main/test" $PWD/build/project_description.json || failure "COMPONENT_DIRS has added component subdirectory to the build"
+    grep "$PWD/main" $PWD/build/project_description.json || failure "COMPONENT_DIRS parent component directory should be included in the build"
+    rm -rf main/test
+
+    print_status "If a component directory is added to COMPONENT_DIRS, its sibling directories are not added"
+    clean_build_dir
+    mkdir -p mycomponents/mycomponent 
+    echo "idf_component_register()" > mycomponents/mycomponent/CMakeLists.txt
+    # first test by adding single component directory to EXTRA_COMPONENT_DIRS
+    mkdir -p mycomponents/esp32
+    echo "idf_component_register()" > mycomponents/esp32/CMakeLists.txt
+    idf.py -DEXTRA_COMPONENT_DIRS=$PWD/mycomponents/mycomponent reconfigure
+    ! grep "$PWD/mycomponents/esp32" $PWD/build/project_description.json || failure "EXTRA_COMPONENT_DIRS has added a sibling directory"
+    grep "$PWD/mycomponents/mycomponent" $PWD/build/project_description.json || failure "EXTRA_COMPONENT_DIRS valid sibling directory should be in the build"
+    rm -rf mycomponents/esp32
+    # now the same thing, but add a components directory
+    mkdir -p esp32
+    echo "idf_component_register()" > esp32/CMakeLists.txt
+    idf.py -DEXTRA_COMPONENT_DIRS=$PWD/mycomponents reconfigure
+    ! grep "$PWD/esp32" $PWD/build/project_description.json || failure "EXTRA_COMPONENT_DIRS has added a sibling directory"
+    grep "$PWD/mycomponents/mycomponent" $PWD/build/project_description.json || failure "EXTRA_COMPONENT_DIRS valid sibling directory should be in the build"
+    rm -rf esp32
+    rm -rf mycomponents
 
     print_status "All tests completed"
     if [ -n "${FAILURES}" ]; then

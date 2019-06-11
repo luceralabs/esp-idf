@@ -33,12 +33,10 @@
 #include "soc/cpu.h"
 #include "soc/rtc.h"
 #include "soc/dport_reg.h"
-#include "soc/io_mux_reg.h"
-#include "soc/efuse_reg.h"
-#include "soc/rtc_cntl_reg.h"
-#include "soc/timer_group_reg.h"
-#include "soc/gpio_reg.h"
-#include "soc/gpio_sig_map.h"
+#include "soc/gpio_periph.h"
+#include "soc/efuse_periph.h"
+#include "soc/rtc_periph.h"
+#include "soc/timer_periph.h"
 
 #include "sdkconfig.h"
 #include "esp_image_format.h"
@@ -560,9 +558,10 @@ static void load_image(const esp_image_metadata_t* image_data)
     err = esp_secure_boot_permanently_enable();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "FAILED TO ENABLE SECURE BOOT (%d).", err);
-        /* Allow booting to continue, as the failure is probably
-           due to user-configured EFUSEs for testing...
+        /* Panic here as secure boot is not properly enabled
+           due to one of the reasons in above function
         */
+        abort();
     }
 #endif
 

@@ -17,16 +17,14 @@
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp32/rom/spi_flash.h"
 #include "esp32/rom/crc.h"
-#include "esp32/rom/ets_sys.h"
 #include "esp32/rom/gpio.h"
 #include "esp_secure_boot.h"
 #include "esp_flash_partitions.h"
 #include "bootloader_flash.h"
 #include "bootloader_common.h"
 #include "soc/gpio_periph.h"
-#include "soc/efuse_reg.h"
+#include "soc/rtc.h"
 #include "esp_image_format.h"
 #include "bootloader_sha.h"
 #include "sys/param.h"
@@ -256,4 +254,19 @@ esp_err_t bootloader_common_get_partition_description(const esp_partition_pos_t 
     }
 
     return ESP_OK;
+}
+
+void bootloader_common_vddsdio_configure()
+{
+#if CONFIG_BOOTLOADER_VDDSDIO_BOOST_1_9V
+    rtc_vddsdio_config_t cfg = rtc_vddsdio_get_config();
+    if (cfg.enable == 1 && cfg.tieh == RTC_VDDSDIO_TIEH_1_8V) {    // VDDSDIO regulator is enabled @ 1.8V
+        cfg.drefh = 3;
+        cfg.drefm = 3;
+        cfg.drefl = 3;
+        cfg.force = 1;
+        rtc_vddsdio_set_config(cfg);
+        ets_delay_us(10); // wait for regulator to become stable
+    }
+#endif // CONFIG_BOOTLOADER_VDDSDIO_BOOST
 }

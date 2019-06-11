@@ -25,10 +25,11 @@
 #include "esp32/rom/uart.h"
 #include "esp32/rom/rtc.h"
 #include "soc/soc.h"
+#include "soc/dport_reg.h"
 #include "soc/rtc.h"
 #include "soc/rtc_wdt.h"
-#include "soc/rtc_cntl_reg.h"
-#include "soc/i2s_reg.h"
+#include "soc/rtc_periph.h"
+#include "soc/i2s_periph.h"
 #include "driver/periph_ctrl.h"
 #include "xtensa/core-macros.h"
 #include "bootloader_clock.h"
@@ -136,7 +137,7 @@ void esp_clk_init(void)
     rtc_clk_cpu_freq_set_config(&new_config);
 
     // Re calculate the ccount to make time calculation correct.
-    XTHAL_SET_CCOUNT( XTHAL_GET_CCOUNT() * new_freq_mhz / old_freq_mhz );
+    XTHAL_SET_CCOUNT( (uint64_t)XTHAL_GET_CCOUNT() * new_freq_mhz / old_freq_mhz );
 }
 
 int IRAM_ATTR esp_clk_cpu_freq(void)

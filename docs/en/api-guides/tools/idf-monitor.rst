@@ -2,6 +2,8 @@
 IDF Monitor
 ***********
 
+:link_to_translation:`zh_CN:[中文]`
+
 The IDF monitor tool is mainly a serial terminal program which relays serial data to and from the target device's serial port. It also provides some IDF-specific features.
 
 This tool can be launched by invoking in IDF the following target:
@@ -92,8 +94,6 @@ IDF Monitor adds more details to the dump::
 To decode each address, IDF Monitor runs the following command in the background::
 
   xtensa-esp32-elf-addr2line -pfiaC -e build/PROJECT.elf ADDRESS
-
-.. note:: Due to a bug in addr2line, line numbers may be incorrect for some source files. However, the function name is always correct.
 
 
 Launching GDB with GDBStub

@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#define ESP_BT_CONTROLLER_CONFIG_MAGIC_VAL  0x5A5AA5A5
+#define ESP_BT_CONTROLLER_CONFIG_MAGIC_VAL  0x20190506
 
 /**
  * @brief Bluetooth mode for controller enable/disable
@@ -36,6 +36,21 @@ typedef enum {
     ESP_BT_MODE_CLASSIC_BT = 0x02,   /*!< Run Classic BT mode */
     ESP_BT_MODE_BTDM       = 0x03,   /*!< Run dual mode */
 } esp_bt_mode_t;
+
+/**
+ * @brief BLE sleep clock accuracy(SCA), values for ble_sca field in esp_bt_controller_config_t,
+ *        currently only ESP_BLE_SCA_500PPM and ESP_BLE_SCA_250PPM are supported
+ */
+enum {
+    ESP_BLE_SCA_500PPM     = 0,   /*!< BLE SCA at 500ppm */
+    ESP_BLE_SCA_250PPM,           /*!< BLE SCA at 250ppm */
+    ESP_BLE_SCA_150PPM,           /*!< BLE SCA at 150ppm */
+    ESP_BLE_SCA_100PPM,           /*!< BLE SCA at 100ppm */
+    ESP_BLE_SCA_75PPM,            /*!< BLE SCA at 75ppm */
+    ESP_BLE_SCA_50PPM,            /*!< BLE SCA at 50ppm */
+    ESP_BLE_SCA_30PPM,            /*!< BLE SCA at 30ppm */
+    ESP_BLE_SCA_20PPM,            /*!< BLE SCA at 20ppm */
+};
 
 #ifdef CONFIG_BT_ENABLED
 /* While scanning, if the free memory value in controller is less than SCAN_SEND_ADV_RESERVED_SIZE,
@@ -100,21 +115,26 @@ the adv packet will be discarded until the memory is restored. */
 #define BTDM_CONTROLLER_BR_EDR_MAX_ACL_CONN_LIMIT   7   //Maximum ACL connection limitation
 #define BTDM_CONTROLLER_BR_EDR_MAX_SYNC_CONN_LIMIT  3   //Maximum SCO/eSCO connection limitation
 
+#define BTDM_CONTROLLER_SCO_DATA_PATH_HCI           0   // SCO data is routed to HCI
+#define BTDM_CONTROLLER_SCO_DATA_PATH_PCM           1   // SCO data path is PCM
+
 #define BT_CONTROLLER_INIT_CONFIG_DEFAULT() {                              \
     .controller_task_stack_size = ESP_TASK_BT_CONTROLLER_STACK,            \
     .controller_task_prio = ESP_TASK_BT_CONTROLLER_PRIO,                   \
     .hci_uart_no = BT_HCI_UART_NO_DEFAULT,                                 \
     .hci_uart_baudrate = BT_HCI_UART_BAUDRATE_DEFAULT,                     \
     .scan_duplicate_mode = SCAN_DUPLICATE_MODE,                            \
-    .scan_duplicate_type = SCAN_DUPLICATE_TYPE_VALUE,                     \
+    .scan_duplicate_type = SCAN_DUPLICATE_TYPE_VALUE,                      \
     .normal_adv_size = NORMAL_SCAN_DUPLICATE_CACHE_SIZE,                   \
     .mesh_adv_size = MESH_DUPLICATE_SCAN_CACHE_SIZE,                       \
     .send_adv_reserved_size = SCAN_SEND_ADV_RESERVED_SIZE,                 \
     .controller_debug_flag = CONTROLLER_ADV_LOST_DEBUG_BIT,                \
     .mode = BTDM_CONTROLLER_MODE_EFF,                                      \
-    .ble_max_conn = CONFIG_BTDM_CTRL_BLE_MAX_CONN_EFF,               \
-    .bt_max_acl_conn = CONFIG_BTDM_CTRL_BR_EDR_MAX_ACL_CONN_EFF,     \
-    .bt_max_sync_conn = CONFIG_BTDM_CTRL_BR_EDR_MAX_SYNC_CONN_EFF,   \
+    .ble_max_conn = CONFIG_BTDM_CTRL_BLE_MAX_CONN_EFF,                     \
+    .bt_max_acl_conn = CONFIG_BTDM_CTRL_BR_EDR_MAX_ACL_CONN_EFF,           \
+    .bt_sco_datapath = CONFIG_BTDM_CTRL_BR_EDR_SCO_DATA_PATH_EFF,          \
+    .bt_max_sync_conn = CONFIG_BTDM_CTRL_BR_EDR_MAX_SYNC_CONN_EFF,         \
+    .ble_sca = CONFIG_BTDM_BLE_SLEEP_CLOCK_ACCURACY_INDEX_EFF,             \
     .magic = ESP_BT_CONTROLLER_CONFIG_MAGIC_VAL,                           \
 };
 
@@ -144,12 +164,14 @@ typedef struct {
     uint8_t mode;                           /*!< Controller mode: BR/EDR, BLE or Dual Mode */
     uint8_t ble_max_conn;                   /*!< BLE maximum connection numbers */
     uint8_t bt_max_acl_conn;                /*!< BR/EDR maximum ACL connection numbers */
+    uint8_t bt_sco_datapath;                /*!< SCO data path, i.e. HCI or PCM module */
     /*
      * Following parameters can not be configured runtime when call esp_bt_controller_init()
      * It will be overwrite with a constant value which in menuconfig or from a macro.
      * So, do not modify the value when esp_bt_controller_init()
      */
     uint8_t bt_max_sync_conn;               /*!< BR/EDR maximum ACL connection numbers. Effective in menuconfig */
+    uint8_t ble_sca;                        /*!< BLE low power crystal accuracy index */
     uint32_t magic;                         /*!< Magic number */
 } esp_bt_controller_config_t;
 

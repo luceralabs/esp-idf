@@ -65,7 +65,8 @@ If you have one of ESP32 development boards listed below, you can click on the l
     ESP32-DevKitC <get-started-devkitc>
     ESP-WROVER-KIT <get-started-wrover-kit>
     ESP32-PICO-KIT <get-started-pico-kit>
-
+    ESP32-Ethernet-Kit <../hw-reference/get-started-ethernet-kit>
+    
 
 .. _get-started-step-by-step-cmake:
 
@@ -283,7 +284,7 @@ Linux and MacOS
     cd ~/esp/hello_world
     idf.py menuconfig
 
-If your default version of Python is 3.x, you may need to run ``python2 idf.py`` instead.
+If your default version of Python is 3.x, you may need to run ``python2 $(which idf.py) menuconfig`` instead.
 
 Windows
 ~~~~~~~
