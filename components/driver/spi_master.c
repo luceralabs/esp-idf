@@ -199,7 +199,7 @@ struct spi_device_t {
     bool        waiting;                //the device is waiting for the exclusive control of the bus
 };
 
-static spi_host_t *spihost[3];
+static spi_host_t *spihost[SOC_SPI_PERIPH_NUM];
 
 
 static const char *SPI_TAG = "spi_master";
@@ -263,7 +263,7 @@ esp_err_t spi_bus_initialize(spi_host_device_t host, const spi_bus_config_t *bus
     int dma_desc_ct=0;
     spihost[host]->dma_chan=dma_chan;
     if (dma_chan == 0) {
-        spihost[host]->max_transfer_sz = 64;
+        spihost[host]->max_transfer_sz = SOC_SPI_MAXIMUM_BUFFER_SIZE;
     } else {
         //See how many dma descriptors we need and allocate them
         dma_desc_ct=lldesc_get_required_num(bus_config->max_transfer_sz);
@@ -313,7 +313,7 @@ cleanup:
     free(spihost[host]);
     spihost[host] = NULL;
     spicommon_periph_free(host);
-    spicommon_dma_chan_free(dma_chan);
+    if (dma_chan != 0) spicommon_dma_chan_free(dma_chan);
     return ret;
 }
 
@@ -389,13 +389,15 @@ esp_err_t spi_bus_add_device(spi_host_device_t host, const spi_device_interface_
     int freq;
     spi_hal_context_t *hal = &spihost[host]->hal;
     hal->half_duplex = dev_config->flags & SPI_DEVICE_HALFDUPLEX ? 1 : 0;
+#ifdef SOC_SPI_SUPPORT_AS_CS
     hal->as_cs = dev_config->flags & SPI_DEVICE_CLK_AS_CS ? 1 : 0;
+#endif
     hal->positive_cs = dev_config->flags & SPI_DEVICE_POSITIVE_CS ? 1 : 0;
     hal->no_compensate = dev_config->flags & SPI_DEVICE_NO_DUMMY ? 1 : 0;
 
     spi_hal_timing_conf_t temp_timing_conf;
     esp_err_t ret = spi_hal_get_clock_conf(hal, dev_config->clock_speed_hz, duty_cycle,
-                                        !(spihost[host]->flags & SPICOMMON_BUSFLAG_NATIVE_PINS),
+                                        !(spihost[host]->flags & SPICOMMON_BUSFLAG_IOMUX_PINS),
                                         dev_config->input_delay_ns, &freq,
                                         &temp_timing_conf);
 
@@ -427,7 +429,7 @@ esp_err_t spi_bus_add_device(spi_host_device_t host, const spi_device_interface_
 
     //Set CS pin, CS options
     if (dev_config->spics_io_num >= 0) {
-        spicommon_cs_initialize(host, dev_config->spics_io_num, freecs, !(spihost[host]->flags&SPICOMMON_BUSFLAG_NATIVE_PINS));
+        spicommon_cs_initialize(host, dev_config->spics_io_num, freecs, !(spihost[host]->flags&SPICOMMON_BUSFLAG_IOMUX_PINS));
     }
 
     *handle=dev;
@@ -870,7 +872,7 @@ static SPI_MASTER_ISR_ATTR esp_err_t setup_priv_desc(spi_transaction_t *trans_de
     }
     if (send_ptr && isdma && !esp_ptr_dma_capable( send_ptr )) {
         //if txbuf in the desc not DMA-capable, malloc a new one
-        ESP_LOGI( SPI_TAG, "Allocate TX buffer for DMA" );
+        ESP_LOGD( SPI_TAG, "Allocate TX buffer for DMA" );
         uint32_t *temp = heap_caps_malloc((trans_desc->length + 7) / 8, MALLOC_CAP_DMA);
         if (temp == NULL) goto clean_up;
 

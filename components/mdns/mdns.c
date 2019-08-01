@@ -174,7 +174,7 @@ static const uint8_t * _mdns_read_fqdn(const uint8_t * packet, const uint8_t * s
     size_t index = 0;
     while (start[index]) {
         if (name->parts == 4) {
-            return NULL;
+            name->invalid = true;
         }
         uint8_t len = start[index++];
         if (len < 0xC0) {
@@ -195,7 +195,7 @@ static const uint8_t * _mdns_read_fqdn(const uint8_t * packet, const uint8_t * s
                 strlcat(name->host, buf, sizeof(name->host));
             } else if (strcasecmp(buf, MDNS_SUB_STR) == 0) {
                 name->sub = 1;
-            } else {
+            } else if (!name->invalid) {
                 char* mdns_name_ptrs[]={name->host, name->service, name->proto, name->domain};
                 memcpy(mdns_name_ptrs[name->parts++], buf, len+1);
             }
@@ -1312,6 +1312,7 @@ static mdns_tx_packet_t * _mdns_create_probe_packet(tcpip_adapter_if_t tcpip_if,
         q->domain = MDNS_DEFAULT_DOMAIN;
         if (!q->host || _mdns_question_exists(q, packet->questions)) {
             free(q);
+            continue;
         } else {
             queueToEnd(mdns_out_question_t, packet->questions, q);
         }
@@ -2315,6 +2316,7 @@ static const uint8_t * _mdns_parse_fqdn(const uint8_t * packet, const uint8_t * 
     name->service[0] = 0;
     name->proto[0] = 0;
     name->domain[0] = 0;
+    name->invalid = false;
 
     static char buf[MDNS_NAME_BUF_LEN];
 
@@ -2322,7 +2324,7 @@ static const uint8_t * _mdns_parse_fqdn(const uint8_t * packet, const uint8_t * 
     if (!next_data) {
         return 0;
     }
-    if (!name->parts) {
+    if (!name->parts || name->invalid) {
         return next_data;
     }
     if (name->parts == 3) {
@@ -2620,7 +2622,7 @@ void mdns_parse_packet(mdns_rx_packet_t * packet)
             clas &= 0x7FFF;
             content = content + 4;
 
-            if (clas != 0x0001) {//bad class
+            if (clas != 0x0001 || name->invalid) {//bad class or invalid name for this question entry
                 continue;
             }
 
@@ -2801,7 +2803,7 @@ void mdns_parse_packet(mdns_rx_packet_t * packet)
                         col = 1;
                     } else if (!clas) {
                         col = -1;
-                    } else {
+                    } else if (service) { // only detect srv collision if service existed
                         col = _mdns_check_srv_collision(service->service, priority, weight, port, name->host, name->domain);
                     }
                     if (col && (parsed_packet->probe || parsed_packet->authoritative)) {
@@ -3048,13 +3050,13 @@ void _mdns_disable_pcb(tcpip_adapter_if_t tcpip_if, mdns_ip_protocol_t ip_protoc
 /**
  * @brief  Dispatch interface changes based on system events
  */
-static void _mdns_handle_system_event(esp_event_base_t event_base, 
+static void _mdns_handle_system_event(esp_event_base_t event_base,
                                       int32_t event_id, tcpip_adapter_if_t interface)
 {
     if (!_mdns_server) {
         return;
     }
-    
+
     tcpip_adapter_dhcp_status_t dcst;
     if (event_base == WIFI_EVENT) {
         switch(event_id) {
@@ -3722,7 +3724,7 @@ static void _mdns_execute_action(mdns_action_t * action)
 
     switch(action->type) {
     case ACTION_SYSTEM_EVENT:
-        _mdns_handle_system_event(action->data.sys_event.event_base, 
+        _mdns_handle_system_event(action->data.sys_event.event_base,
             action->data.sys_event.event_id, action->data.sys_event.interface);
         break;
     case ACTION_HOSTNAME_SET:
@@ -3831,23 +3833,25 @@ static void _mdns_execute_action(mdns_action_t * action)
         break;
     case ACTION_SERVICE_DEL:
         a = _mdns_server->services;
-        if (_mdns_server->services == action->data.srv_del.service) {
-            _mdns_server->services = a->next;
-            _mdns_send_bye(&a, 1, false);
-            _mdns_remove_scheduled_service_packets(a->service);
-            _mdns_free_service(a->service);
-            free(a);
-        } else {
-            while (a->next && a->next != action->data.srv_del.service) {
-                a = a->next;
-            }
-            if (a->next == action->data.srv_del.service) {
-                mdns_srv_item_t * b = a->next;
-                a->next = a->next->next;
-                _mdns_send_bye(&b, 1, false);
-                _mdns_remove_scheduled_service_packets(b->service);
-                _mdns_free_service(b->service);
-                free(b);
+        if (action->data.srv_del.service) {
+            if (_mdns_server->services == action->data.srv_del.service) {
+                _mdns_server->services = a->next;
+                _mdns_send_bye(&a, 1, false);
+                _mdns_remove_scheduled_service_packets(a->service);
+                _mdns_free_service(a->service);
+                free(a);
+            } else {
+                while (a->next && a->next != action->data.srv_del.service) {
+                    a = a->next;
+                }
+                if (a->next == action->data.srv_del.service) {
+                    mdns_srv_item_t * b = a->next;
+                    a->next = a->next->next;
+                    _mdns_send_bye(&b, 1, false);
+                    _mdns_remove_scheduled_service_packets(b->service);
+                    _mdns_free_service(b->service);
+                    free(b);
+                }
             }
         }
 
@@ -4117,7 +4121,7 @@ esp_err_t mdns_handle_system_event(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-static void event_handler(void* arg, esp_event_base_t event_base, 
+static void event_handler(void* arg, esp_event_base_t event_base,
                      int32_t event_id, void* event_data)
 {
     if (!_mdns_server) {
@@ -4139,7 +4143,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
     if (xQueueSend(_mdns_server->action_queue, &action, (portTickType)0) != pdPASS) {
         free(action);
-    }    
+    }
 }
 
 esp_err_t mdns_init()
